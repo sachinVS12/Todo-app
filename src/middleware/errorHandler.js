@@ -1,20 +1,20 @@
 const errorHandler = (err, req, res, next) => {
+  console.error("Error handler:", err.message);
+
   let statusCode = res.statusCode === 200 ? 500 : res.statusCode;
   let message = err.message;
 
-  // Mongoose bad ObjectId
+  // Check for specific error types
   if (err.name === "CastError") {
     message = "Resource not found";
     statusCode = 404;
   }
 
-  // Mongoose duplicate key
   if (err.code === 11000) {
     message = "Duplicate field value entered";
     statusCode = 400;
   }
 
-  // Mongoose validation error
   if (err.name === "ValidationError") {
     message = Object.values(err.errors)
       .map((val) => val.message)
@@ -22,9 +22,20 @@ const errorHandler = (err, req, res, next) => {
     statusCode = 400;
   }
 
+  if (err.name === "JsonWebTokenError") {
+    message = "Invalid token";
+    statusCode = 401;
+  }
+
+  if (err.name === "TokenExpiredError") {
+    message = "Token expired";
+    statusCode = 401;
+  }
+
   res.status(statusCode).json({
-    message,
-    stack: process.env.NODE_ENV === "production" ? null : err.stack,
+    success: false,
+    error: message,
+    ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
   });
 };
 
